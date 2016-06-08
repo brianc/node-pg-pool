@@ -38,7 +38,7 @@ Pool.prototype._create = function (cb) {
   client.connect(function (err) {
     this.log('client connected')
     if (err) {
-      this.log('client connection error:', e)
+      this.log('client connection error:', err)
       cb(err)
     }
 
@@ -96,9 +96,9 @@ Pool.prototype.query = function (text, values) {
         client.release()
         return res
       }).catch(function (error) {
-      client.release(error)
-      throw error
-    })
+        client.release(error)
+        throw error
+      })
   })
 }
 

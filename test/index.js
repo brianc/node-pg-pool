@@ -1,8 +1,10 @@
 var expect = require('expect.js')
-var Client = require('pg').Client
 var co = require('co')
 var Promise = require('bluebird')
 var _ = require('lodash')
+
+var describe = require('mocha').describe
+var it = require('mocha').it
 
 var Pool = require('../')
 
@@ -25,6 +27,7 @@ describe('pool', function () {
       const pool = new Pool({ binary: true })
       pool.connect(function (err, client, release) {
         release()
+        if (err) return done(err)
         expect(client.binary).to.eql(true)
         pool.end(done)
       })
@@ -34,6 +37,7 @@ describe('pool', function () {
       const pool = new Pool()
       pool.connect(function (err, client, release) {
         release()
+        if (err) return done(err)
         client.testString = 'foo'
         setTimeout(function () {
           client.emit('error', new Error('on purpose'))
@@ -81,11 +85,9 @@ describe('pool', function () {
 
     it('supports just running queries', co.wrap(function * () {
       var pool = new Pool({ poolSize: 9 })
-      var count = 0
       var queries = _.times(30).map(function () {
         return pool.query('SELECT $1::text as name', ['hi'])
       })
-      console.log('executing')
       yield queries
       expect(pool.pool.getPoolSize()).to.be(9)
       expect(pool.pool.availableObjectsCount()).to.be(9)
@@ -96,10 +98,10 @@ describe('pool', function () {
       var pool = new Pool({ poolSize: 9 })
       var count = 0
 
-      while(count++ < 30) {
+      while (count++ < 30) {
         try {
           yield pool.query('SELECT lksjdfd')
-        } catch(e) {}
+        } catch (e) {}
       }
       var res = yield pool.query('SELECT $1::text as name', ['hi'])
       expect(res.rows).to.eql([{ name: 'hi' }])
