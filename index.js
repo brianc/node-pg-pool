@@ -3,11 +3,11 @@ var util = require('util')
 var EventEmitter = require('events').EventEmitter
 var debug = require('debug')
 
-var Pool = module.exports = function (options) {
+var Pool = module.exports = function (options, Client) {
   EventEmitter.call(this)
   this.options = options || {}
   this.log = this.options.log || debug('pg:pool')
-  this.Client = this.options.Client || require('pg').Client
+  this.Client = this.options.Client || Client || require('pg').Client
   this.Promise = this.options.Promise || Promise
 
   this.options.max = this.options.max || this.options.poolSize || 10
