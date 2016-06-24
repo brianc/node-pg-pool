@@ -36,7 +36,9 @@ describe('pool', function () {
       const pool = new Pool()
       pool.query('SELECT $1::text as name', ['brianc'], function (err, res) {
         expect(res.rows[0]).to.eql({ name: 'brianc' })
-        pool.end(done)
+        pool.end(function () {
+          done(err)
+        })
       })
     })
 
