@@ -7,7 +7,7 @@ var Promise = require('bluebird')
 
 var Pool = require('../')
 
-if (typeof global.Promise == 'undefined') {
+if (typeof global.Promise === 'undefined') {
   global.Promise = Promise
 }
 
@@ -91,9 +91,9 @@ describe('pool', function () {
   describe('with promises', function () {
     it('connects and disconnects', function () {
       var pool = new Pool()
-      return pool.connect().then(function(client) {
+      return pool.connect().then(function (client) {
         expect(pool.pool.availableObjectsCount()).to.be(0)
-        return client.query('select $1::text as name', ['hi']).then(function(res) {
+        return client.query('select $1::text as name', ['hi']).then(function (res) {
           expect(res.rows).to.eql([{ name: 'hi' }])
           client.release()
           expect(pool.pool.getPoolSize()).to.be(1)
@@ -106,7 +106,7 @@ describe('pool', function () {
     it('properly pools clients', function () {
       var pool = new Pool({ poolSize: 9 })
       return Promise.map(_.times(30), function () {
-        return pool.connect().then(function(client) {
+        return pool.connect().then(function (client) {
           return client.query('select $1::text as name', ['hi']).then(function (res) {
             client.release()
             return res
@@ -151,7 +151,7 @@ describe('pool', function () {
   })
 })
 
-process.on('unhandledRejection', function(e) {
+process.on('unhandledRejection', function (e) {
   console.error(e.message, e.stack)
   setImmediate(function () {
     throw e
