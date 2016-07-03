@@ -10,7 +10,7 @@ var Pool = require('../')
 describe('pool', function () {
   describe('with callbacks', function () {
     it('works totally unconfigured', function (done) {
-      const pool = new Pool()
+      var pool = new Pool()
       pool.connect(function (err, client, release) {
         if (err) return done(err)
         client.query('SELECT NOW()', function (err, res) {
@@ -23,7 +23,7 @@ describe('pool', function () {
     })
 
     it('passes props to clients', function (done) {
-      const pool = new Pool({ binary: true })
+      var pool = new Pool({ binary: true })
       pool.connect(function (err, client, release) {
         release()
         if (err) return done(err)
@@ -33,7 +33,7 @@ describe('pool', function () {
     })
 
     it('can run a query with a callback without parameters', function (done) {
-      const pool = new Pool()
+      var pool = new Pool()
       pool.query('SELECT 1 as num', function (err, res) {
         expect(res.rows[0]).to.eql({ num: 1 })
         pool.end(function () {
@@ -43,7 +43,7 @@ describe('pool', function () {
     })
 
     it('can run a query with a callback', function (done) {
-      const pool = new Pool()
+      var pool = new Pool()
       pool.query('SELECT $1::text as name', ['brianc'], function (err, res) {
         expect(res.rows[0]).to.eql({ name: 'brianc' })
         pool.end(function () {
@@ -53,7 +53,7 @@ describe('pool', function () {
     })
 
     it('removes client if it errors in background', function (done) {
-      const pool = new Pool()
+      var pool = new Pool()
       pool.connect(function (err, client, release) {
         release()
         if (err) return done(err)
