@@ -1,3 +1,4 @@
+"use strict"
 var util = require('util')
 var EventEmitter = require('events').EventEmitter
 
@@ -11,6 +12,8 @@ var Pool = module.exports = function (options, Client) {
   this.Client = this.options.Client || Client || require('pg').Client
   this.Promise = this.options.Promise || global.Promise
   this._clients = []
+  this._idle = []
+  this._pendingQueue = []
 
   this.options.max = this.options.max || this.options.poolSize || 10
 
@@ -34,9 +37,54 @@ Pool.prototype._promiseNoCallback = function (callback, executor) {
     : new this.Promise(executor)
 }
 
+Pool.prototype._pulseQueue = function () {
+  if (!this._pendingQueue.length) {
+    return
+  }
+  if (!this._idle.length) {
+    return
+  }
+  const client = this._idle.pop()
+  const waiter = this._pendingQueue.shift()
+  waiter(null, client)
+}
+
 Pool.prototype.connect = function (cb) {
   if (this._clients.length >= this.options.max) {
-    throw new Error('pool is full')
+    let result = undefined
+    if (!cb) {
+      let reject = undefined
+      let resolve = undefined
+      cb = function (err, client) {
+        err ? reject(err) : resolve(client)
+      }
+      result = new Promise(function (res, rej) {
+        resolve = res
+        reject = rej
+      })
+    }
+    this._pendingQueue.push((err, client) => {
+      const idleListener = (err) => {
+        err.client = client
+        this.emit('error', err, client)
+        client.removeListener('error', idleListener)
+        client.on('error', () => {
+          this.log('additional client error after disconnection due to error', err)
+        })
+        client.end()
+      }
+      const release = () => {
+        delete client.release
+        client.on('error', idleListener)
+        client.removeListener('error', idleListener)
+        this._idle.push(client)
+        this._pulseQueue()
+      }
+      client.release = release
+      cb(err, client)
+    })
+    this._pulseQueue()
+    return result
   }
   const client = new this.Client(this.options)
   this._clients.push(client)
@@ -61,9 +109,13 @@ Pool.prototype.connect = function (cb) {
       reject = rej
     })
   }
-  client.connect(function (err) {
-    const release = function release() {
+  client.connect((err) => {
+    const release = () => {
+      delete client.release
       client.on('error', idleListener)
+      client.removeListener('error', idleListener)
+      this._idle.push(client)
+      this._pulseQueue()
     }
     if (err) {
       cb(err, undefined, function() { })
@@ -97,7 +149,7 @@ Pool.prototype.query = function (text, values, cb) {
       return cb(err)
     }
     client.query(text, values, function (err, res) {
-      client.release()
+      client.release(err)
       if (err) {
         return cb(err)
       } else {
@@ -116,7 +168,24 @@ Pool.prototype.end = function (cb) {
   Promise.all(promises)
     .then(() => cb ? cb() : undefined)
     .catch(err => {
-      console.log('end error', err)
       cb(err)
     })
 }
+
+Object.defineProperty(Pool.prototype, 'waitingCount', {
+  get: function () {
+    return this._pendingQueue.length
+  }
+})
+
+Object.defineProperty(Pool.prototype, 'idleCount', {
+  get: function () {
+    return this._idle.length
+  }
+})
+
+Object.defineProperty(Pool.prototype, 'totalCount', {
+  get: function () {
+    return this._clients.length
+  }
+})
