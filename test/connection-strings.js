@@ -12,8 +12,8 @@ describe('Connection strings', function () {
       Client: function (args) {
         expect(args.connectionString).to.equal(connectionString)
         return {
-          connect: function (cb) {
-            cb(new Error('testing'))
+          connect: function () {
+            return Promise.reject(new Error('testing'))
           },
           on: function () { }
         }
