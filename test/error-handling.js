@@ -1,18 +1,17 @@
-var co = require('co')
-var expect = require('expect.js')
-var _ = require('lodash')
+"use strict"
+const co = require('co')
+const expect = require('expect.js')
 
-var describe = require('mocha').describe
-var it = require('mocha').it
-var Promise = require('bluebird')
+const describe = require('mocha').describe
+const it = require('mocha').it
 
-var Pool = require('../')
+const Pool = require('../')
 
 describe('pool error handling', function () {
   it('Should complete these queries without dying', function (done) {
-    var pool = new Pool()
-    var errors = 0
-    var shouldGet = 0
+    const pool = new Pool()
+    let errors = 0
+    let shouldGet = 0
     function runErrorQuery () {
       shouldGet++
       return new Promise(function (resolve, reject) {
@@ -24,8 +23,8 @@ describe('pool error handling', function () {
         })
       })
     }
-    var ps = []
-    for (var i = 0; i < 5; i++) {
+    const ps = []
+    for (let i = 0; i < 5; i++) {
       ps.push(runErrorQuery())
     }
     Promise.all(ps).then(function () {
