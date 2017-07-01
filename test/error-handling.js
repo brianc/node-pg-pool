@@ -1,4 +1,4 @@
-
+var co = require('co')
 var expect = require('expect.js')
 var _ = require('lodash')
 
@@ -31,6 +31,29 @@ describe('pool error handling', function () {
     Promise.all(ps).then(function () {
       expect(shouldGet).to.eql(errors)
       pool.end(done)
+    })
+  })
+
+  describe('calling release more than once', () => {
+    it('should throw each time', co.wrap(function* () {
+      const pool = new Pool()
+      const client = yield pool.connect()
+      client.release()
+      expect(() => client.release()).to.throwError()
+      expect(() => client.release()).to.throwError()
+      return yield pool.end()
+    }))
+  })
+
+  describe('calling connect after end', () => {
+    it('should return an error', function * () {
+      const pool = new Pool()
+      const res = yield pool.query('SELECT $1::text as name', ['hi'])
+      expect(res.rows[0].name).to.equal('hi')
+      const wait = pool.end()
+      pool.query('select now()')
+      yield wait
+      expect(() => pool.query('select now()')).to.reject()
     })
   })
 })

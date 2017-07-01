@@ -57,7 +57,7 @@ describe('events', function () {
     setTimeout(function () {
       expect(acquireCount).to.be(20)
       pool.end(done)
-    }, 40)
+    }, 100)
   })
 
   it('emits error and client if an idle client in the pool hits an error', function (done) {

@@ -7,7 +7,7 @@ var Pool = module.exports = function (options, Client) {
     return new Pool(options, Client)
   }
   EventEmitter.call(this)
-  this.options = Object.assign({}, Pool.defaults, options)
+  this.options = Object.assign({}, options)
   this.log = this.options.log || function () { }
   this.Client = this.options.Client || Client || require('pg').Client
   this.Promise = this.options.Promise || global.Promise
@@ -16,26 +16,9 @@ var Pool = module.exports = function (options, Client) {
   this._pendingQueue = []
 
   this.options.max = this.options.max || this.options.poolSize || 10
-
-  if (this.options.create) {
-    throw new Error('support custom create')
-  }
-
-  if (this.options.destroy) {
-    throw new Error('support custom destroy')
-  }
-}
-
-Pool.defaults = {
 }
 
 util.inherits(Pool, EventEmitter)
-
-Pool.prototype._promiseNoCallback = function (callback, executor) {
-  return callback
-    ? executor()
-    : new this.Promise(executor)
-}
 
 Pool.prototype._pulseQueue = function () {
   if (!this._pendingQueue.length) {
