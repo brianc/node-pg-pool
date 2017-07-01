@@ -49,6 +49,12 @@ Pool.prototype._promisify = function(callback) {
   return { callback: cb, result: result }
 }
 
+Pool.prototype._remove = function (client) {
+  this._idle = this._idle.filter(c => c != client)
+  this._clients = this._clients.filter(c => c != client)
+  client.end()
+}
+
 Pool.prototype.connect = function (cb) {
   if (this._ending) {
     const err = new Error('Cannot use a pool after calling end on the pool')
@@ -76,12 +82,14 @@ Pool.prototype.connect = function (cb) {
   this._clients.push(client)
   const idleListener = (err) => {
     err.client = client
-    this.emit('error', err, client)
     client.removeListener('error', idleListener)
     client.on('error', () => {
       this.log('additional client error after disconnection due to error', err)
     })
-    client.end()
+    this._remove(client)
+    // TODO - document that once the pool emits an error
+    // the client has already been closed & purged and is unusable
+    this.emit('error', err, client)
   }
 
   const response = this._promisify(cb)

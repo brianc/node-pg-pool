@@ -91,6 +91,27 @@ describe('pool error handling', function () {
         })
       })
     })
+  })
 
+  describe('error on idel client', () => {
+    it('removes client from pool', co.wrap(function * () {
+      const pool = new Pool()
+      const client = yield pool.connect()
+      expect(pool.totalCount).to.equal(1)
+      expect(pool.waitingCount).to.equal(0)
+      expect(pool.idleCount).to.equal(0)
+      client.release()
+      yield new Promise((resolve, reject) => {
+        process.nextTick(() => {
+          pool.once('error', (err) => {
+            expect(err.message).to.equal('expected')
+            expect(pool.idleCount).to.equal(0)
+            expect(pool.totalCount).to.equal(0)
+            pool.end().then(resolve, reject)
+          })
+          client.emit('error', new Error('expected'))
+        })
+      })
+    }))
   })
 })
