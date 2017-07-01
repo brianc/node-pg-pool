@@ -1,7 +1,6 @@
 'use strict'
 const co = require('co')
 const expect = require('expect.js')
-const _ = require('lodash')
 
 const describe = require('mocha').describe
 const it = require('mocha').it

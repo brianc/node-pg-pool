@@ -8,7 +8,7 @@ const it = require('mocha').it
 const Pool = require('../')
 
 describe('pool size of 1', () => {
-  it ('can create a single client and use it once', co.wrap(function * () {
+  it('can create a single client and use it once', co.wrap(function * () {
     const pool = new Pool({ max: 1 })
     expect(pool.waitingCount).to.equal(0)
     const client = yield pool.connect()

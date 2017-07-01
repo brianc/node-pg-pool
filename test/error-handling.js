@@ -1,4 +1,4 @@
-"use strict"
+'use strict'
 const co = require('co')
 const expect = require('expect.js')
 
@@ -34,7 +34,7 @@ describe('pool error handling', function () {
   })
 
   describe('calling release more than once', () => {
-    it('should throw each time', co.wrap(function* () {
+    it('should throw each time', co.wrap(function * () {
       const pool = new Pool()
       const client = yield pool.connect()
       client.release()
@@ -59,7 +59,6 @@ describe('pool error handling', function () {
   describe('using an ended pool', () => {
     it('rejects all additional promises', (done) => {
       const pool = new Pool()
-      const errors = []
       const promises = []
       pool.end()
         .then(() => {
@@ -76,7 +75,6 @@ describe('pool error handling', function () {
 
     it('returns an error on all additional callbacks', (done) => {
       const pool = new Pool()
-      const errors = []
       pool.end(() => {
         pool.query('SELECT *', (err) => {
           expect(err).to.be.an(Error)

@@ -1,4 +1,4 @@
-"use strict"
+'use strict'
 const util = require('util')
 const EventEmitter = require('events').EventEmitter
 
@@ -33,12 +33,12 @@ Pool.prototype._pulseQueue = function () {
   waiter(null, client)
 }
 
-Pool.prototype._promisify = function(callback) {
+Pool.prototype._promisify = function (callback) {
   if (callback) {
     return { callback: callback, result: undefined }
   }
-  let reject = undefined
-  let resolve = undefined
+  let reject
+  let resolve
   const cb = function (err, client) {
     err ? reject(err) : resolve(client)
   }
@@ -50,8 +50,8 @@ Pool.prototype._promisify = function(callback) {
 }
 
 Pool.prototype._remove = function (client) {
-  this._idle = this._idle.filter(c => c != client)
-  this._clients = this._clients.filter(c => c != client)
+  this._idle = this._idle.filter(c => c !== client)
+  this._clients = this._clients.filter(c => c !== client)
   client.end()
 }
 
@@ -105,7 +105,7 @@ Pool.prototype.connect = function (cb) {
     }
     client.on('error', idleListener)
     if (err) {
-      cb(err, undefined, function() { })
+      cb(err, undefined, function () { })
     } else {
       client.release = release
       this.emit('connect', client)
@@ -117,7 +117,7 @@ Pool.prototype.connect = function (cb) {
 }
 
 Pool.prototype.query = function (text, values, cb) {
-  if (typeof values == 'function') {
+  if (typeof values === 'function') {
     cb = values
     values = undefined
   }
