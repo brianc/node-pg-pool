@@ -1,8 +1,8 @@
 "use strict"
-var util = require('util')
-var EventEmitter = require('events').EventEmitter
+const util = require('util')
+const EventEmitter = require('events').EventEmitter
 
-var Pool = module.exports = function (options, Client) {
+const Pool = module.exports = function (options, Client) {
   if (!(this instanceof Pool)) {
     return new Pool(options, Client)
   }

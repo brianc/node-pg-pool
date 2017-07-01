@@ -1,14 +1,14 @@
-var expect = require('expect.js')
-var EventEmitter = require('events').EventEmitter
-var describe = require('mocha').describe
-var it = require('mocha').it
-var objectAssign = require('object-assign')
-var Pool = require('../')
+const expect = require('expect.js')
+const EventEmitter = require('events').EventEmitter
+const describe = require('mocha').describe
+const it = require('mocha').it
+const objectAssign = require('object-assign')
+const Pool = require('../')
 
 describe('events', function () {
   it('emits connect before callback', function (done) {
-    var pool = new Pool()
-    var emittedClient = false
+    const pool = new Pool()
+    let emittedClient = false
     pool.on('connect', function (client) {
       emittedClient = client
     })
@@ -23,7 +23,7 @@ describe('events', function () {
   })
 
   it('emits "connect" only with a successful connection', function (done) {
-    var pool = new Pool({
+    const pool = new Pool({
       // This client will always fail to connect
       Client: mockClient({
         connect: function (cb) {
@@ -41,13 +41,13 @@ describe('events', function () {
   })
 
   it('emits acquire every time a client is acquired', function (done) {
-    var pool = new Pool()
-    var acquireCount = 0
+    const pool = new Pool()
+    let acquireCount = 0
     pool.on('acquire', function (client) {
       expect(client).to.be.ok()
       acquireCount++
     })
-    for (var i = 0; i < 10; i++) {
+    for (let i = 0; i < 10; i++) {
       pool.connect(function (err, client, release) {
         if (err) return done(err)
         release()
@@ -61,7 +61,7 @@ describe('events', function () {
   })
 
   it('emits error and client if an idle client in the pool hits an error', function (done) {
-    var pool = new Pool()
+    const pool = new Pool()
     pool.connect(function (err, client) {
       expect(err).to.equal(undefined)
       client.release()
@@ -79,7 +79,7 @@ describe('events', function () {
 
 function mockClient (methods) {
   return function () {
-    var client = new EventEmitter()
+    const client = new EventEmitter()
     objectAssign(client, methods)
     return client
   }
