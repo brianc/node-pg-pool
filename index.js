@@ -14,6 +14,7 @@ var Pool = module.exports = function (options, Client) {
   this._clients = []
   this._idle = []
   this._pendingQueue = []
+  this._ending = false
 
   this.options.max = this.options.max || this.options.poolSize || 10
 }
@@ -32,20 +33,31 @@ Pool.prototype._pulseQueue = function () {
   waiter(null, client)
 }
 
+const promisify = callback => {
+  if (callback) {
+    return { callback: callback, result: undefined }
+  }
+  let reject = undefined
+  let resolve = undefined
+  const cb = function (err, client) {
+    err ? reject(err) : resolve(client)
+  }
+  const result = new Promise(function (res, rej) {
+    resolve = res
+    reject = rej
+  })
+  return { callback: cb, result: result }
+}
+
 Pool.prototype.connect = function (cb) {
+  if (this._ending) {
+    const err = new Error('Cannot use a pool after calling end on the pool')
+    return cb ? cb(err) : Promise.reject(err)
+  }
   if (this._clients.length >= this.options.max) {
-    let result = undefined
-    if (!cb) {
-      let reject = undefined
-      let resolve = undefined
-      cb = function (err, client) {
-        err ? reject(err) : resolve(client)
-      }
-      result = new Promise(function (res, rej) {
-        resolve = res
-        reject = rej
-      })
-    }
+    const response = promisify(cb)
+    const result = response.result
+    cb = response.callback
     this._pendingQueue.push((err, client) => {
       const release = () => {
         client.release = function () { throw new Error('called release twice') }
@@ -59,6 +71,7 @@ Pool.prototype.connect = function (cb) {
     this._pulseQueue()
     return result
   }
+
   const client = new this.Client(this.options)
   this._clients.push(client)
   const idleListener = (err) => {
@@ -70,18 +83,10 @@ Pool.prototype.connect = function (cb) {
     })
     client.end()
   }
-  let result = undefined
-  if (!cb) {
-    let reject = undefined
-    let resolve = undefined
-    cb = function (err, client) {
-      err ? reject(err) : resolve(client)
-    }
-    result = new Promise(function (res, rej) {
-      resolve = res
-      reject = rej
-    })
-  }
+
+  const response = promisify(cb)
+  const result = response.result
+  cb = response.callback
   this.log('connecting new client', this.options)
   client.connect((err) => {
     this.log('new client connected')
@@ -108,18 +113,8 @@ Pool.prototype.query = function (text, values, cb) {
     cb = values
     values = undefined
   }
-  let result = undefined
-  if (!cb) {
-    let reject = undefined
-    let resolve = undefined
-    cb = function (err, res) {
-      err ? reject(err) : resolve(res)
-    }
-    result = new Promise(function (res, rej) {
-      resolve = res
-      reject = rej
-    })
-  }
+  const response = promisify(cb)
+  cb = response.callback
   this.connect(function (err, client) {
     if (err) {
       return cb(err)
@@ -133,10 +128,15 @@ Pool.prototype.query = function (text, values, cb) {
       }
     })
   })
-  return result
+  return response.result
 }
 
 Pool.prototype.end = function (cb) {
+  if (this._ending) {
+    const err = new Error('Called end on pool more than once')
+    return cb ? cb(err) : Promise.reject(err)
+  }
+  this._ending = true
   const promises = this._clients.map(client => client.end())
   if (!cb) {
     return Promise.all(promises)

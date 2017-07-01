@@ -56,4 +56,41 @@ describe('pool error handling', function () {
       expect(() => pool.query('select now()')).to.reject()
     })
   })
+
+  describe('using an ended pool', () => {
+    it('rejects all additional promises', (done) => {
+      const pool = new Pool()
+      const errors = []
+      const promises = []
+      pool.end()
+        .then(() => {
+          const squash = promise => promise.catch(e => 'okay!')
+          promises.push(squash(pool.connect()))
+          promises.push(squash(pool.query('SELECT NOW()')))
+          promises.push(squash(pool.end()))
+          Promise.all(promises).then(res => {
+            expect(res).to.eql(['okay!', 'okay!', 'okay!'])
+            done()
+          })
+        })
+    })
+
+    it('returns an error on all additional callbacks', (done) => {
+      const pool = new Pool()
+      const errors = []
+      pool.end(() => {
+        pool.query('SELECT *', (err) => {
+          expect(err).to.be.an(Error)
+          pool.connect((err) => {
+            expect(err).to.be.an(Error)
+            pool.end((err) => {
+              expect(err).to.be.an(Error)
+              done()
+            })
+          })
+        })
+      })
+    })
+
+  })
 })
