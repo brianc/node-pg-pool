@@ -93,7 +93,7 @@ describe('pool error handling', function () {
     })
   })
 
-  describe('error on idel client', () => {
+  describe('error from idle client', () => {
     it('removes client from pool', co.wrap(function * () {
       const pool = new Pool()
       const client = yield pool.connect()
