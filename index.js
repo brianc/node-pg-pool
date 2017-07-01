@@ -82,8 +82,9 @@ Pool.prototype.connect = function (cb) {
       reject = rej
     })
   }
-  this.log('creating new client')
+  this.log('connecting new client', this.options)
   client.connect((err) => {
+    this.log('new client connected')
     const release = () => {
       client.release = function () { throw new Error('called release twice') }
       this._idle.push(client)

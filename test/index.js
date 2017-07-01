@@ -58,7 +58,7 @@ describe('pool', function () {
     })
 
     it('passes connection errors to callback', function (done) {
-      const pool = new Pool({ host: 'alsdkfjlaskd0808fj' })
+      const pool = new Pool({ port: 53922 })
       pool.query('SELECT $1::text as name', ['brianc'], function (err, res) {
         expect(res).to.be(undefined)
         expect(err).to.be.an(Error)
