@@ -8,23 +8,15 @@ var Promise = require('bluebird')
 
 var Pool = require('../')
 
-if (typeof global.Promise === 'undefined') {
-  global.Promise = Promise
-}
-
-
 describe('pool error handling', function () {
   it('Should complete these queries without dying', function (done) {
-    var pgPool = new Pool()
-    var pool = pgPool.pool
-    pool._factory.max = 1
-    pool._factory.min = null
+    var pool = new Pool()
     var errors = 0
     var shouldGet = 0
     function runErrorQuery () {
       shouldGet++
       return new Promise(function (resolve, reject) {
-        pgPool.query("SELECT 'asd'+1 ").then(function (res) {
+        pool.query("SELECT 'asd'+1 ").then(function (res) {
           reject(res) // this should always error
         }).catch(function (err) {
           errors++
@@ -38,14 +30,7 @@ describe('pool error handling', function () {
     }
     Promise.all(ps).then(function () {
       expect(shouldGet).to.eql(errors)
-      done()
+      pool.end(done)
     })
-  })
-})
-
-process.on('unhandledRejection', function (e) {
-  console.error(e.message, e.stack)
-  setImmediate(function () {
-    throw e
   })
 })

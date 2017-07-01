@@ -64,24 +64,14 @@ Pool.prototype.connect = function (cb) {
       })
     }
     this._pendingQueue.push((err, client) => {
-      const idleListener = (err) => {
-        err.client = client
-        this.emit('error', err, client)
-        client.removeListener('error', idleListener)
-        client.on('error', () => {
-          this.log('additional client error after disconnection due to error', err)
-        })
-        client.end()
-      }
       const release = () => {
-        delete client.release
-        client.on('error', idleListener)
-        client.removeListener('error', idleListener)
+        client.release = function () { throw new Error('called release twice') }
         this._idle.push(client)
         this._pulseQueue()
       }
       client.release = release
-      cb(err, client)
+      this.emit('acquire', client)
+      cb(err, client, release)
     })
     this._pulseQueue()
     return result
@@ -109,18 +99,20 @@ Pool.prototype.connect = function (cb) {
       reject = rej
     })
   }
+  this.log('creating new client')
   client.connect((err) => {
     const release = () => {
-      delete client.release
-      client.on('error', idleListener)
-      client.removeListener('error', idleListener)
+      client.release = function () { throw new Error('called release twice') }
       this._idle.push(client)
       this._pulseQueue()
     }
+    client.on('error', idleListener)
     if (err) {
       cb(err, undefined, function() { })
     } else {
       client.release = release
+      this.emit('connect', client)
+      this.emit('acquire', client)
       cb(undefined, client, release)
     }
   })

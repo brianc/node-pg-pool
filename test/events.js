@@ -27,17 +27,17 @@ describe('events', function () {
       // This client will always fail to connect
       Client: mockClient({
         connect: function (cb) {
-          process.nextTick(function () { cb(new Error('bad news')) })
+          process.nextTick(() => {
+            cb(new Error('bad news'))
+            setImmediate(done)
+          })
         }
       })
     })
     pool.on('connect', function () {
       throw new Error('should never get here')
     })
-    pool._create(function (err) {
-      if (err) done()
-      else done(new Error('expected failure'))
-    })
+    return pool.connect().catch(e => expect(e.message).to.equal('bad news'))
   })
 
   it('emits acquire every time a client is acquired', function (done) {
@@ -49,9 +49,8 @@ describe('events', function () {
     })
     for (var i = 0; i < 10; i++) {
       pool.connect(function (err, client, release) {
-        err ? done(err) : release()
-        release()
         if (err) return done(err)
+        release()
       })
       pool.query('SELECT now()')
     }
@@ -64,7 +63,7 @@ describe('events', function () {
   it('emits error and client if an idle client in the pool hits an error', function (done) {
     var pool = new Pool()
     pool.connect(function (err, client) {
-      expect(err).to.equal(null)
+      expect(err).to.equal(undefined)
       client.release()
       setImmediate(function () {
         client.emit('error', new Error('problem'))

@@ -7,3 +7,4 @@ const crash = reason => {
 
 crash('unhandledRejection')
 crash('uncaughtError')
+crash('warning')

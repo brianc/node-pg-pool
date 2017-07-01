@@ -68,7 +68,7 @@ describe('pool', function () {
       })
     })
 
-    it.skip('removes client if it errors in background', function (done) {
+    it('removes client if it errors in background', function (done) {
       const pool = new Pool()
       pool.connect(function (err, client, release) {
         release()
