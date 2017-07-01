@@ -33,7 +33,7 @@ Pool.prototype._pulseQueue = function () {
   waiter(null, client)
 }
 
-const promisify = callback => {
+Pool.prototype._promisify = function(callback) {
   if (callback) {
     return { callback: callback, result: undefined }
   }
@@ -42,7 +42,7 @@ const promisify = callback => {
   const cb = function (err, client) {
     err ? reject(err) : resolve(client)
   }
-  const result = new Promise(function (res, rej) {
+  const result = new this.Promise(function (res, rej) {
     resolve = res
     reject = rej
   })
@@ -52,10 +52,10 @@ const promisify = callback => {
 Pool.prototype.connect = function (cb) {
   if (this._ending) {
     const err = new Error('Cannot use a pool after calling end on the pool')
-    return cb ? cb(err) : Promise.reject(err)
+    return cb ? cb(err) : this.Promise.reject(err)
   }
   if (this._clients.length >= this.options.max) {
-    const response = promisify(cb)
+    const response = this._promisify(cb)
     const result = response.result
     cb = response.callback
     this._pendingQueue.push((err, client) => {
@@ -84,7 +84,7 @@ Pool.prototype.connect = function (cb) {
     client.end()
   }
 
-  const response = promisify(cb)
+  const response = this._promisify(cb)
   const result = response.result
   cb = response.callback
   this.log('connecting new client', this.options)
@@ -113,7 +113,7 @@ Pool.prototype.query = function (text, values, cb) {
     cb = values
     values = undefined
   }
-  const response = promisify(cb)
+  const response = this._promisify(cb)
   cb = response.callback
   this.connect(function (err, client) {
     if (err) {
@@ -134,14 +134,14 @@ Pool.prototype.query = function (text, values, cb) {
 Pool.prototype.end = function (cb) {
   if (this._ending) {
     const err = new Error('Called end on pool more than once')
-    return cb ? cb(err) : Promise.reject(err)
+    return cb ? cb(err) : this.Promise.reject(err)
   }
   this._ending = true
   const promises = this._clients.map(client => client.end())
   if (!cb) {
-    return Promise.all(promises)
+    return this.Promise.all(promises)
   }
-  Promise.all(promises)
+  this.Promise.all(promises)
     .then(() => cb ? cb() : undefined)
     .catch(err => {
       cb(err)
