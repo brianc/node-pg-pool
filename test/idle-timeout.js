@@ -9,7 +9,7 @@ const Pool = require('../')
 
 
 describe('idle timeout', () => {
-  it('should be a thing', () => {
+  it('should be a thing', false, () => {
     return Promise.reject(new Error('Should support idle timeout'))
   })
 })

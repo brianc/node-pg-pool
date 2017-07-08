@@ -2,6 +2,8 @@
 const util = require('util')
 const EventEmitter = require('events').EventEmitter
 
+const NOOP = function() { }
+
 const Pool = module.exports = function (options, Client) {
   if (!(this instanceof Pool)) {
     return new Pool(options, Client)
@@ -21,16 +23,28 @@ const Pool = module.exports = function (options, Client) {
 
 util.inherits(Pool, EventEmitter)
 
+Pool.prototype._isFull = function () {
+  return this._clients.length >= this.options.max
+}
+
 Pool.prototype._pulseQueue = function () {
+  // if we don't have any waiting, do nothing
   if (!this._pendingQueue.length) {
     return
   }
-  if (!this._idle.length) {
+  // if we don't have any idle clients and we have no more room do nothing
+  if (!this._idle.length && this._isFull()) {
     return
   }
-  const client = this._idle.pop()
   const waiter = this._pendingQueue.shift()
-  waiter(null, client)
+  if (this._idle.length) {
+    const client = this._idle.pop()
+    return waiter(null, client)
+  }
+  if (!this._isFull()) {
+    return this.connect(waiter)
+  }
+  throw new Error('unexpected condition')
 }
 
 Pool.prototype._promisify = function (callback) {
@@ -52,7 +66,12 @@ Pool.prototype._promisify = function (callback) {
 Pool.prototype._remove = function (client) {
   this._idle = this._idle.filter(c => c !== client)
   this._clients = this._clients.filter(c => c !== client)
+  console.log('remove', this._clients.length)
   client.end()
+}
+
+function release (err) {
+
 }
 
 Pool.prototype.connect = function (cb) {
@@ -65,9 +84,16 @@ Pool.prototype.connect = function (cb) {
     const result = response.result
     cb = response.callback
     this._pendingQueue.push((err, client) => {
-      const release = () => {
+      if (err) {
+        return cb(err, undefined, function () { })
+      }
+      const release = (err) => {
         client.release = function () { throw new Error('called release twice') }
-        this._idle.push(client)
+        if (err) {
+          this._remove(client)
+        } else {
+          this._idle.push(client)
+        }
         this._pulseQueue()
       }
       client.release = release
@@ -98,14 +124,20 @@ Pool.prototype.connect = function (cb) {
   this.log('connecting new client', this.options)
   client.connect((err) => {
     this.log('new client connected')
-    const release = () => {
+    const release = (err) => {
       client.release = function () { throw new Error('called release twice') }
-      this._idle.push(client)
+      if (err) {
+        this._remove(client)
+      } else {
+        this._idle.push(client)
+      }
       this._pulseQueue()
     }
     client.on('error', idleListener)
     if (err) {
-      cb(err, undefined, function () { })
+      // remove the dead client from our list of clients
+      this._clients = this._clients.filter(c => c !== client)
+      cb(err, undefined, NOOP)
     } else {
       client.release = release
       this.emit('connect', client)

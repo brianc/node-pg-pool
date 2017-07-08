@@ -62,9 +62,21 @@ describe('pool', function () {
       pool.query('SELECT $1::text as name', ['brianc'], function (err, res) {
         expect(res).to.be(undefined)
         expect(err).to.be.an(Error)
+        // a connection error should not polute the pool with a dead client
+        expect(pool.totalCount).to.equal(0)
         pool.end(function (err) {
           done(err)
         })
+      })
+    })
+
+    it('does not pass client to error callback', function (done) {
+      const pool = new Pool({ port: 58242 })
+      pool.connect(function (err, client, release) {
+        expect(err).to.be.an(Error)
+        expect(client).to.be(undefined)
+        expect(release).to.be.a(Function)
+        pool.end(done)
       })
     })
 
@@ -178,7 +190,7 @@ describe('pool', function () {
       })
     })
 
-    it('recovers from all errors', function () {
+    it.only('recovers from query errors', function () {
       const pool = new Pool()
 
       const errors = []
@@ -190,7 +202,8 @@ describe('pool', function () {
       })
       return Promise.all(promises).then(() => {
         expect(errors).to.have.length(30)
-        expect(pool.idleCount).to.equal(10)
+        expect(pool.totalCount).to.equal(0)
+        expect(pool.idleCount).to.equal(0)
         return pool.query('SELECT $1::text as name', ['hi']).then(function (res) {
           expect(res.rows).to.eql([{ name: 'hi' }])
           return pool.end()

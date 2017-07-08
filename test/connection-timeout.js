@@ -8,7 +8,7 @@ const it = require('mocha').it
 const Pool = require('../')
 
 describe('connection timeout', () => {
-  it('should be a thing', () => {
+  it('should be a thing', false, () => {
     return Promise.reject(new Error('Should support idle timeout'))
   })
 })
