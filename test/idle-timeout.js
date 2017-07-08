@@ -34,4 +34,20 @@ describe('idle timeout', () => {
     }
     expect(results).to.have.length(20)
   }))
+
+  it('does not time out clients which are used', co.wrap(function * () {
+    const pool = new Pool()
+    const results = []
+    for (var i = 0; i < 20; i++) {
+      let query = pool.query('SELECT NOW()')
+      expect(pool.idleCount).to.equal(0)
+      expect(pool.totalCount).to.equal(1)
+      results.push(yield query)
+      yield wait(2)
+      expect(pool.idleCount).to.equal(1)
+      expect(pool.totalCount).to.equal(1)
+    }
+    expect(results).to.have.length(20)
+    return pool.end()
+  }))
 })

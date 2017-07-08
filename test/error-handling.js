@@ -111,4 +111,25 @@ describe('pool error handling', function () {
       })
     }))
   })
+
+  describe('pool with lots of errors', () => {
+    it('continues to work and provide new clients', co.wrap(function * () {
+      const pool = new Pool({ max: 1 })
+      const errors = []
+      for (var i = 0; i < 20; i++) {
+        try {
+          yield pool.query('invalid sql')
+        } catch (err) {
+          errors.push(err)
+        }
+      }
+      expect(errors).to.have.length(20)
+      expect(pool.idleCount).to.equal(0)
+      expect(pool.query).to.be.a(Function)
+      const res = yield pool.query('SELECT $1::text as name', ['brianc'])
+      expect(res.rows).to.have.length(1)
+      expect(res.rows[0].name).to.equal('brianc')
+      return pool.end()
+    }))
+  })
 })

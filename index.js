@@ -104,7 +104,7 @@ Pool.prototype.connect = function (cb) {
     const err = new Error('Cannot use a pool after calling end on the pool')
     return cb ? cb(err) : this.Promise.reject(err)
   }
-  if (this._clients.length >= this.options.max) {
+  if (this._clients.length >= this.options.max || this._idle.length) {
     const response = this._promisify(cb)
     const result = response.result
     cb = response.callback
@@ -137,7 +137,7 @@ Pool.prototype.connect = function (cb) {
   const response = this._promisify(cb)
   const result = response.result
   cb = response.callback
-  this.log('connecting new client', this.options)
+  this.log('connecting new client')
 
   // connection timeout logic
   let tid = undefined
