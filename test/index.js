@@ -190,7 +190,7 @@ describe('pool', function () {
       })
     })
 
-    it.only('recovers from query errors', function () {
+    it('recovers from query errors', function () {
       const pool = new Pool()
 
       const errors = []

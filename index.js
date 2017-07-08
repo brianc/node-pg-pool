@@ -66,7 +66,6 @@ Pool.prototype._promisify = function (callback) {
 Pool.prototype._remove = function (client) {
   this._idle = this._idle.filter(c => c !== client)
   this._clients = this._clients.filter(c => c !== client)
-  console.log('remove', this._clients.length)
   client.end()
 }
 
