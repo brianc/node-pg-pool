@@ -69,7 +69,14 @@ Pool.prototype._remove = function (client) {
   client.end()
 }
 
-function release (err) {
+function release(client, err) {
+  client.release = function () { throw new Error('called release twice') }
+  if (err) {
+    this._remove(client)
+  } else {
+    this._idle.push(client)
+  }
+  this._pulseQueue()
 
 }
 
@@ -86,18 +93,9 @@ Pool.prototype.connect = function (cb) {
       if (err) {
         return cb(err, undefined, function () { })
       }
-      const release = (err) => {
-        client.release = function () { throw new Error('called release twice') }
-        if (err) {
-          this._remove(client)
-        } else {
-          this._idle.push(client)
-        }
-        this._pulseQueue()
-      }
-      client.release = release
+      client.release = release.bind(this, client)
       this.emit('acquire', client)
-      cb(err, client, release)
+      cb(err, client, client.release)
     })
     this._pulseQueue()
     return result
@@ -121,27 +119,36 @@ Pool.prototype.connect = function (cb) {
   const result = response.result
   cb = response.callback
   this.log('connecting new client', this.options)
+
+  // connection timeout logic
+  let tid = undefined
+  let timeoutHit = false
+  if (this.options.connectionTimeout) {
+    tid = setTimeout(() => {
+      this.log('ending client due to timeout')
+      timeoutHit = true
+      client.connection.stream.destroy()
+    }, this.options.connectionTimeout)
+  }
+
   client.connect((err) => {
     this.log('new client connected')
-    const release = (err) => {
-      client.release = function () { throw new Error('called release twice') }
-      if (err) {
-        this._remove(client)
-      } else {
-        this._idle.push(client)
-      }
-      this._pulseQueue()
+    if (tid) {
+      clearTimeout(tid)
     }
     client.on('error', idleListener)
     if (err) {
       // remove the dead client from our list of clients
       this._clients = this._clients.filter(c => c !== client)
+      if (timeoutHit) {
+        err.message = 'Connection terminiated due to connection timeout'
+      }
       cb(err, undefined, NOOP)
     } else {
-      client.release = release
+      client.release = release.bind(this, client)
       this.emit('connect', client)
       this.emit('acquire', client)
-      cb(undefined, client, release)
+      cb(undefined, client, client.release)
     }
   })
   return result
