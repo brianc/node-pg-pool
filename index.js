@@ -38,8 +38,9 @@ Pool.prototype._pulseQueue = function () {
   }
   const waiter = this._pendingQueue.shift()
   if (this._idle.length) {
-    const client = this._idle.pop()
-    return waiter(null, client)
+    const idleItem = this._idle.pop()
+    clearTimeout(idleItem.timeoutId)
+    return waiter(null, idleItem.client)
   }
   if (!this._isFull()) {
     return this.connect(waiter)
@@ -64,20 +65,38 @@ Pool.prototype._promisify = function (callback) {
 }
 
 Pool.prototype._remove = function (client) {
-  this._idle = this._idle.filter(c => c !== client)
+  this._idle = this._idle.filter(item => item.client !== client)
   this._clients = this._clients.filter(c => c !== client)
   client.end()
+  this.emit('remove', client)
+}
+
+class IdleItem {
+  constructor(client, timeoutId) {
+    this.client = client
+    this.timeoutId = timeoutId
+  }
 }
 
 function release(client, err) {
   client.release = function () { throw new Error('called release twice') }
   if (err) {
     this._remove(client)
-  } else {
-    this._idle.push(client)
+    this._pulseQueue()
+    return
   }
-  this._pulseQueue()
 
+  // idle timeout
+  let tid = undefined
+  if (this.options.idleTimeout) {
+    tid = setTimeout(() => {
+      this.log('remove idle client')
+      this._remove(client)
+    }, this.idleTimeout)
+  }
+
+  this._idle.push(new IdleItem(client, tid))
+  this._pulseQueue()
 }
 
 Pool.prototype.connect = function (cb) {
