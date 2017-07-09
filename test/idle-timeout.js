@@ -11,7 +11,7 @@ const wait = time => new Promise((resolve) => setTimeout(resolve, time))
 
 describe('idle timeout', () => {
   it('should timeout and remove the client', (done) => {
-    const pool = new Pool({ idleTimeout: 10 })
+    const pool = new Pool({ idleTimeoutMillis: 10 })
     pool.query('SELECT NOW()')
     pool.on('remove', () => {
       expect(pool.idleCount).to.equal(0)
@@ -21,7 +21,7 @@ describe('idle timeout', () => {
   })
 
   it('can remove idle clients and recreate them', co.wrap(function * () {
-    const pool = new Pool({ idleTimeout: 1 })
+    const pool = new Pool({ idleTimeoutMillis: 1 })
     const results = []
     for (var i = 0; i < 20; i++) {
       let query = pool.query('SELECT NOW()')

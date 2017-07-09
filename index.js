@@ -16,7 +16,7 @@ const Pool = module.exports = function (options, Client) {
   this._clients = []
   this._idle = []
   this._pendingQueue = []
-  this._ending = false
+  this.ending = false
 
   this.options.max = this.options.max || this.options.poolSize || 10
 }
@@ -88,11 +88,11 @@ function release(client, err) {
 
   // idle timeout
   let tid = undefined
-  if (this.options.idleTimeout) {
+  if (this.options.idleTimeoutMillis) {
     tid = setTimeout(() => {
       this.log('remove idle client')
       this._remove(client)
-    }, this.idleTimeout)
+    }, this.idleTimeoutMillis)
   }
 
   this._idle.push(new IdleItem(client, tid))
@@ -100,7 +100,7 @@ function release(client, err) {
 }
 
 Pool.prototype.connect = function (cb) {
-  if (this._ending) {
+  if (this.ending) {
     const err = new Error('Cannot use a pool after calling end on the pool')
     return cb ? cb(err) : this.Promise.reject(err)
   }
@@ -142,13 +142,13 @@ Pool.prototype.connect = function (cb) {
   // connection timeout logic
   let tid = undefined
   let timeoutHit = false
-  if (this.options.connectionTimeout) {
+  if (this.options.connectionTimeoutMillis) {
     tid = setTimeout(() => {
       this.log('ending client due to timeout')
       timeoutHit = true
       // force kill the node driver, and let libpq do its teardown
       client.connection ? client.connection.stream.destroy() : client.end()
-    }, this.options.connectionTimeout)
+    }, this.options.connectionTimeoutMillis)
   }
 
   client.connect((err) => {
@@ -198,11 +198,11 @@ Pool.prototype.query = function (text, values, cb) {
 }
 
 Pool.prototype.end = function (cb) {
-  if (this._ending) {
+  if (this.ending) {
     const err = new Error('Called end on pool more than once')
     return cb ? cb(err) : this.Promise.reject(err)
   }
-  this._ending = true
+  this.ending = true
   const promises = this._clients.map(client => client.end())
   if (!cb) {
     return this.Promise.all(promises)
