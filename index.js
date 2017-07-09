@@ -2,7 +2,7 @@
 const util = require('util')
 const EventEmitter = require('events').EventEmitter
 
-const NOOP = function() { }
+const NOOP = function () { }
 
 const Pool = module.exports = function (options, Client) {
   if (!(this instanceof Pool)) {
@@ -72,13 +72,13 @@ Pool.prototype._remove = function (client) {
 }
 
 class IdleItem {
-  constructor(client, timeoutId) {
+  constructor (client, timeoutId) {
     this.client = client
     this.timeoutId = timeoutId
   }
 }
 
-function release(client, err) {
+function release (client, err) {
   client.release = function () { throw new Error('called release twice') }
   if (err) {
     this._remove(client)
@@ -87,7 +87,7 @@ function release(client, err) {
   }
 
   // idle timeout
-  let tid = undefined
+  let tid
   if (this.options.idleTimeoutMillis) {
     tid = setTimeout(() => {
       this.log('remove idle client')
@@ -140,7 +140,7 @@ Pool.prototype.connect = function (cb) {
   this.log('connecting new client')
 
   // connection timeout logic
-  let tid = undefined
+  let tid
   let timeoutHit = false
   if (this.options.connectionTimeoutMillis) {
     tid = setTimeout(() => {

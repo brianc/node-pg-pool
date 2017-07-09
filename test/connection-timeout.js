@@ -5,10 +5,10 @@ const expect = require('expect.js')
 
 const describe = require('mocha').describe
 const it = require('mocha').it
+const before = require('mocha').before
+const after = require('mocha').after
 
 const Pool = require('../')
-
-
 
 describe('connection timeout', () => {
   before((done) => {
@@ -52,7 +52,7 @@ describe('connection timeout', () => {
     for (var i = 0; i < 15; i++) {
       try {
         yield pool.connect()
-      } catch(e) {
+      } catch (e) {
         errors.push(e)
       }
     }
