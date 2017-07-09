@@ -188,7 +188,11 @@ Pool.prototype.connect = function (cb) {
       client.release = release.bind(this, client)
       this.emit('connect', client)
       this.emit('acquire', client)
-      cb(undefined, client, client.release)
+      if (this.options.verify) {
+        this.options.verify(client, cb)
+      } else {
+        cb(undefined, client, client.release)
+      }
     }
   })
   return result
