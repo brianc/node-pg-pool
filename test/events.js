@@ -4,7 +4,6 @@ const expect = require('expect.js')
 const EventEmitter = require('events').EventEmitter
 const describe = require('mocha').describe
 const it = require('mocha').it
-const objectAssign = require('object-assign')
 const Pool = require('../')
 
 describe('events', function () {
@@ -82,7 +81,7 @@ describe('events', function () {
 function mockClient (methods) {
   return function () {
     const client = new EventEmitter()
-    objectAssign(client, methods)
+    Object.assign(client, methods)
     return client
   }
 }
