@@ -35,5 +35,8 @@
     "standard": "7.1.2",
     "standard-format": "2.2.1"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "peerDependencies": {
+    "pg": ">5.0"
+  }
 }
