@@ -16,6 +16,7 @@ const Pool = module.exports = function (options, Client) {
   this._clients = []
   this._idle = []
   this._pendingQueue = []
+  this._endCallback = undefined
   this.ending = false
 
   this.options.max = this.options.max || this.options.poolSize || 10
@@ -28,8 +29,22 @@ Pool.prototype._isFull = function () {
 }
 
 Pool.prototype._pulseQueue = function () {
+  this.log('pulse queue')
+  if (this.ending) {
+    this.log('pulse queue on ending')
+    if (this._idle.length) {
+      this._idle.map(item => {
+        this._remove(item.client)
+      })
+    }
+    if (!this._clients.length) {
+      this._endCallback()
+    }
+    return
+  }
   // if we don't have any waiting, do nothing
   if (!this._pendingQueue.length) {
+    this.log('no queued requests')
     return
   }
   // if we don't have any idle clients and we have no more room do nothing
@@ -95,7 +110,11 @@ function release (client, err) {
     }, this.idleTimeoutMillis)
   }
 
-  this._idle.push(new IdleItem(client, tid))
+  if (this.ending) {
+    this._remove(client)
+  } else {
+    this._idle.push(new IdleItem(client, tid))
+  }
   this._pulseQueue()
 }
 
@@ -151,6 +170,7 @@ Pool.prototype.connect = function (cb) {
     }, this.options.connectionTimeoutMillis)
   }
 
+  this.log('connecting new client')
   client.connect((err) => {
     this.log('new client connected')
     if (tid) {
@@ -181,11 +201,13 @@ Pool.prototype.query = function (text, values, cb) {
   }
   const response = this._promisify(cb)
   cb = response.callback
-  this.connect(function (err, client) {
+  this.connect((err, client) => {
     if (err) {
       return cb(err)
     }
-    client.query(text, values, function (err, res) {
+    this.log('dispatching query')
+    client.query(text, values, (err, res) => {
+      this.log('query dispatched')
       client.release(err)
       if (err) {
         return cb(err)
@@ -198,20 +220,16 @@ Pool.prototype.query = function (text, values, cb) {
 }
 
 Pool.prototype.end = function (cb) {
+  this.log('ending')
   if (this.ending) {
     const err = new Error('Called end on pool more than once')
     return cb ? cb(err) : this.Promise.reject(err)
   }
   this.ending = true
-  const promises = this._clients.map(client => client.end())
-  if (!cb) {
-    return this.Promise.all(promises)
-  }
-  this.Promise.all(promises)
-    .then(() => cb ? cb() : undefined)
-    .catch(err => {
-      cb(err)
-    })
+  const promised = this._promisify(cb)
+  this._endCallback = promised.callback
+  this._pulseQueue()
+  return promised.result
 }
 
 Object.defineProperty(Pool.prototype, 'waitingCount', {

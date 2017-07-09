@@ -16,14 +16,17 @@ const checkType = promise => {
 describe('Bring your own promise', function () {
   it('uses supplied promise for operations', co.wrap(function * () {
     const pool = new Pool({ Promise: BluebirdPromise })
-    yield checkType(pool.connect())
+    const client1 = yield checkType(pool.connect())
+    client1.release()
     yield checkType(pool.query('SELECT NOW()'))
-    yield checkType(pool.connect())
+    const client2 = yield checkType(pool.connect())
+    // TODO - make sure pg supports BYOP as well
+    client2.release()
     yield checkType(pool.end())
   }))
 
   it('uses promises in errors', co.wrap(function * () {
-    const pool = new Pool({ Promise: BluebirdPromise })
+    const pool = new Pool({ Promise: BluebirdPromise, port: 48484 })
     yield checkType(pool.connect())
     yield checkType(pool.end())
     yield checkType(pool.connect())
