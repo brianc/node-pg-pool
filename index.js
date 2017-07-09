@@ -146,7 +146,8 @@ Pool.prototype.connect = function (cb) {
     tid = setTimeout(() => {
       this.log('ending client due to timeout')
       timeoutHit = true
-      client.connection.stream.destroy()
+      // force kill the node driver, and let libpq do its teardown
+      client.connection ? client.connection.stream.destroy() : client.end()
     }, this.options.connectionTimeout)
   }
 
