@@ -1,3 +1,5 @@
+'use strict'
+
 const expect = require('expect.js')
 const EventEmitter = require('events').EventEmitter
 const describe = require('mocha').describe
