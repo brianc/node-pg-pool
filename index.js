@@ -55,7 +55,10 @@ Pool.prototype._pulseQueue = function () {
   if (this._idle.length) {
     const idleItem = this._idle.pop()
     clearTimeout(idleItem.timeoutId)
-    return waiter(null, idleItem.client)
+    const client = idleItem.client
+    client.release = release.bind(this, client)
+    this.emit('acquire', client)
+    return waiter(undefined, client, client.release)
   }
   if (!this._isFull()) {
     return this.connect(waiter)
@@ -93,8 +96,12 @@ class IdleItem {
   }
 }
 
+function throwOnRelease() {
+  throw new Error('Release called on client which has already been released to the pool.')
+}
+
 function release (client, err) {
-  client.release = function () { throw new Error('called release twice') }
+  client.release = throwOnRelease
   if (err) {
     this._remove(client)
     this._pulseQueue()
@@ -126,15 +133,7 @@ Pool.prototype.connect = function (cb) {
   if (this._clients.length >= this.options.max || this._idle.length) {
     const response = this._promisify(cb)
     const result = response.result
-    cb = response.callback
-    this._pendingQueue.push((err, client) => {
-      if (err) {
-        return cb(err, undefined, function () { })
-      }
-      client.release = release.bind(this, client)
-      this.emit('acquire', client)
-      cb(err, client, client.release)
-    })
+    this._pendingQueue.push(response.callback)
     this._pulseQueue()
     return result
   }
