@@ -8,12 +8,6 @@ const it = require('mocha').it
 const Pool = require('../')
 
 describe('pool', function () {
-  it('can be used as a factory function', function () {
-    const pool = Pool()
-    expect(pool instanceof Pool).to.be.ok()
-    expect(typeof pool.connect).to.be('function')
-  })
-
   describe('with callbacks', function () {
     it('works totally unconfigured', function (done) {
       const pool = new Pool()
