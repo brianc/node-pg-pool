@@ -134,7 +134,10 @@ Pool.prototype.connect = function (cb) {
     const response = this._promisify(cb)
     const result = response.result
     this._pendingQueue.push(response.callback)
-    this._pulseQueue()
+    // if we have idle clients schedule a pulse immediately
+    if (this._idle.length) {
+      process.nextTick(() => this._pulseQueue())
+    }
     return result
   }
 
@@ -152,9 +155,6 @@ Pool.prototype.connect = function (cb) {
     this.emit('error', err, client)
   }
 
-  const response = this._promisify(cb)
-  const result = response.result
-  cb = response.callback
   this.log('connecting new client')
 
   // connection timeout logic
@@ -168,6 +168,9 @@ Pool.prototype.connect = function (cb) {
       client.connection ? client.connection.stream.destroy() : client.end()
     }, this.options.connectionTimeoutMillis)
   }
+
+  const response = this._promisify(cb)
+  cb = response.callback
 
   this.log('connecting new client')
   client.connect((err) => {
@@ -194,7 +197,7 @@ Pool.prototype.connect = function (cb) {
       }
     }
   })
-  return result
+  return response.result
 }
 
 Pool.prototype.query = function (text, values, cb) {

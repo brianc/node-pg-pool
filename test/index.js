@@ -136,6 +136,26 @@ describe('pool', function () {
       const returnValue = pool.end(done)
       expect(returnValue).to.be(undefined)
     })
+
+    it('never calls callback syncronously', function (done) {
+      const pool = new Pool()
+      pool.connect((err, client) => {
+        if (err) throw err
+        client.release()
+        setImmediate(() => {
+          let called = false
+          pool.connect((err, client) => {
+            if (err) throw err
+            called = true
+            client.release()
+            setImmediate(() => {
+              pool.end(done)
+            })
+          })
+          expect(called).to.equal(false)
+        })
+      })
+    })
   })
 
   describe('with promises', function () {

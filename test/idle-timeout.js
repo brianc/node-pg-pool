@@ -36,14 +36,15 @@ describe('idle timeout', () => {
   }))
 
   it('does not time out clients which are used', co.wrap(function * () {
-    const pool = new Pool()
+    const pool = new Pool({ idleTimeoutMillis: 1 })
     const results = []
     for (var i = 0; i < 20; i++) {
-      let query = pool.query('SELECT NOW()')
-      expect(pool.idleCount).to.equal(0)
+      let client = yield pool.connect()
       expect(pool.totalCount).to.equal(1)
-      results.push(yield query)
-      yield wait(2)
+      expect(pool.idleCount).to.equal(0)
+      yield wait(10)
+      results.push(yield client.query('SELECT NOW()'))
+      client.release()
       expect(pool.idleCount).to.equal(1)
       expect(pool.totalCount).to.equal(1)
     }
