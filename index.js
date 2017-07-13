@@ -4,6 +4,42 @@ const EventEmitter = require('events').EventEmitter
 
 const NOOP = function () { }
 
+class IdleItem {
+  constructor (client, timeoutId) {
+    this.client = client
+    this.timeoutId = timeoutId
+  }
+}
+
+function throwOnRelease () {
+  throw new Error('Release called on client which has already been released to the pool.')
+}
+
+function release (client, err) {
+  client.release = throwOnRelease
+  if (err) {
+    this._remove(client)
+    this._pulseQueue()
+    return
+  }
+
+  // idle timeout
+  let tid
+  if (this.options.idleTimeoutMillis) {
+    tid = setTimeout(() => {
+      this.log('remove idle client')
+      this._remove(client)
+    }, this.idleTimeoutMillis)
+  }
+
+  if (this.ending) {
+    this._remove(client)
+  } else {
+    this._idle.push(new IdleItem(client, tid))
+  }
+  this._pulseQueue()
+}
+
 const Pool = module.exports = function (options, Client) {
   if (!(this instanceof Pool)) {
     return new Pool(options, Client)
@@ -87,42 +123,6 @@ Pool.prototype._remove = function (client) {
   this._clients = this._clients.filter(c => c !== client)
   client.end()
   this.emit('remove', client)
-}
-
-class IdleItem {
-  constructor (client, timeoutId) {
-    this.client = client
-    this.timeoutId = timeoutId
-  }
-}
-
-function throwOnRelease() {
-  throw new Error('Release called on client which has already been released to the pool.')
-}
-
-function release (client, err) {
-  client.release = throwOnRelease
-  if (err) {
-    this._remove(client)
-    this._pulseQueue()
-    return
-  }
-
-  // idle timeout
-  let tid
-  if (this.options.idleTimeoutMillis) {
-    tid = setTimeout(() => {
-      this.log('remove idle client')
-      this._remove(client)
-    }, this.idleTimeoutMillis)
-  }
-
-  if (this.ending) {
-    this._remove(client)
-  } else {
-    this._idle.push(new IdleItem(client, tid))
-  }
-  this._pulseQueue()
 }
 
 Pool.prototype.connect = function (cb) {

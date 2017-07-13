@@ -1,3 +1,4 @@
+'use strict'
 const expect = require('expect.js')
 const _ = require('lodash')
 
